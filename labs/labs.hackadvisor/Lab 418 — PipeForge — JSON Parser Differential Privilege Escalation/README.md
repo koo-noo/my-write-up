@@ -16,7 +16,7 @@
 
 При переходе на целевую машину открывается сервис **PipeForge** — панель управления CI/CD пайплайнами с дашбордом, историей сборок и профилем пользователя.
 
-![Главная страница PipeForge](/images/отчет1-1.PNG)
+![Главная страница PipeForge](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20418%20%E2%80%94%20PipeForge%20%E2%80%94%20JSON%20Parser%20Differential%20Privilege%20Escalation/images/%D0%BE%D1%82%D1%87%D0%B5%D1%821-1.PNG)
 
 ---
 
