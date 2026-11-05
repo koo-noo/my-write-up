@@ -50,23 +50,9 @@
 
 ![Перехват запроса в Burp Suite](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20418%20%E2%80%94%20PipeForge%20%E2%80%94%20JSON%20Parser%20Differential%20Privilege%20Escalation/images/%D0%BE%D1%82%D1%87%D0%B5%D1%822-2.PNG)
 
-### Запрос (Request)
+### Возникает догадка о векторе атаки .
 
-```http
-POST /api/profile HTTP/1.1
-Host: ab90888f-cb5b-4403-b717-717e985c6795.labs.hackadvisor.io
-Content-Type: application/json
 
-{
-    "display_name": "Alex Rivera",
-    "email": "user@test.com1",
-    "notifications": true,
-    "role": "viewer",
-    "ROLE": "admin"
-}
-```
-
-> **Обрати внимание:** в тело запроса мы добавили дублирующийся ключ с другим регистром — `"ROLE": "admin"`. Запрос ушёл успешно, сервер вернул статус `success`. Но почему это сработало?
 
 ---
 
