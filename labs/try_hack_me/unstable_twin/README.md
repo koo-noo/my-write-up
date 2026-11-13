@@ -24,7 +24,7 @@ sudo nmap -sC -sV -v 10.113.189.121
 *   **22/tcp** (SSH - OpenSSH 8.0)
 *   **80/tcp** (HTTP - nginx 1.14.1)
 
-![Результаты сканирования Nmap](labs/try_hack_me/unstable_twin/images/отчет1.PNG)
+![Результаты сканирования Nmap](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%821.PNG)
 
 При переходе по IP-адресу в браузере отдается ошибка **404 NOT FOUND**. Поскольку корень сайта пуст, начинаем фаззить директории с помощью `ffuf`:
 
