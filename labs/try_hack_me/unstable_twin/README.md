@@ -131,13 +131,17 @@ username=test'+UNION+SELECT+user_id,notes+FROM+notes--+&password=test
 ssh mary_ann@10.113.189.121
 # Пароль: Experiment
 ```
-![первый_флаг](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8213.PNG)
+![мэри энн](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8213.PNG)
 
-Заходим на сервер, получаем первый флаг и читаем заметки на сервере.
+Нашли первый флаг.
 
-![заметки на сервере](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8214.PNG)
+![флаг](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8214.PNG)
 
-Далее переходим по ссылке в браузере: `http://10.113.189.121/get_image?name=marnie` (на скриншоте изображены две женщины). Скачиваем картинку и проверяем её на наличие скрытых данных с помощью **steghide**:
+Далее читаем server_notes.txt
+
+![замтеки](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8220.PNG)
+
+Теперь переходим по ссылке в браузере: `http://10.113.189.121/get_image?name=marnie` (на скриншоте изображены две женщины). Скачиваем картинку и проверяем её на наличие скрытых данных с помощью **steghide**:
 
 ```bash
 steghide extract -sf mary.jpeg
@@ -145,7 +149,7 @@ steghide extract -sf mary.jpeg
 
 Вводим пароль (пустой или пароль от Мэри Энн) и извлекаем файл `mary_ann.txt`.
 
-![Скриншот извлечения steghide](images/steghide_extract.png)
+![Скриншот извлечения steghide](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8216.PNG)
 
 ---
 
@@ -162,12 +166,12 @@ steghide extract -sf mary.jpeg
 *   **Yellow** — `jKLNAAeCdl2J8BCRuXVX`
 *   **Green** — `eVYvs6J6HKpZWPG8pfeHoNG1`
 
-Собираем их в правильном порядке (по цветам радуги):
+Собираем их в правильном порядке (по цветам радуги) и декодируем:
 `1DVsdb2uEE0k5HK4GAIZ` + `PS0Mby2jomUKLjvQ4OSw` + `jKLNAAeCdl2J8BCRuXVX` + `eVYvs6J6HKpZWPG8pfeHoNG1`
 
 Получаем финальный флаг: **THM{...}**
 
-![Скриншот финального флага](images/final_flag.png)
+![Скриншот финального флага](https://github.com/koo-noo/my-write-up/blob/main/labs/try_hack_me/unstable_twin/images/%D0%BE%D1%82%D1%87%D0%B5%D1%8217.PNG)
 
 ---
 
